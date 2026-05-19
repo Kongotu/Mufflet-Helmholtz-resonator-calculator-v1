@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>층별 분할 헬름홀츠 공명기 계산기</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #111827; }
+    .container { max-width: 1380px; margin: 0 auto; padding: 32px 20px; }
+    h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.2; }
+    .subtitle { margin: 0 0 24px; color: #4b5563; line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: 430px 1fr; gap: 24px; align-items: start; }
+    .card { background: white; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.06); padding: 24px; }
+    .card h2 { margin: 0 0 18px; font-size: 22px; }
+    .form-grid, .dynamic-inputs { display: grid; gap: 16px; }
+    .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #374151; }
+    input, select { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 16px; background: white; }
+    input:disabled { background: #f3f4f6; color: #6b7280; }
+    input:focus, select:focus { outline: none; border-color: #111827; }
+    button { margin-top: 18px; width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; background: #111827; color: white; font-size: 15px; font-weight: 700; cursor: pointer; }
+    button:hover { background: #374151; }
+    .note { margin-top: 18px; padding: 14px; border-radius: 16px; background: #f3f4f6; color: #374151; line-height: 1.6; font-size: 14px; }
+    .warning { margin-top: 12px; padding: 12px; border-radius: 14px; background: #fff7ed; color: #9a3412; line-height: 1.5; font-size: 14px; display: none; }
+    .danger { background: #fef2f2; color: #991b1b; }
+    .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .result-box { background: #f9fafb; border-radius: 18px; padding: 18px; border: 1px solid #eef0f3; }
+    .result-box h3 { margin: 0 0 8px; font-size: 17px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    .row:last-child { border-bottom: none; }
+    .row span:first-child { color: #4b5563; }
+    .row span:last-child { font-weight: 700; text-align: right; }
+    .highlight { margin-top: 18px; padding: 20px; border-radius: 18px; background: #111827; color: white; }
+    .highlight .small { color: #d1d5db; font-size: 14px; }
+    .highlight .big { margin-top: 6px; font-size: 34px; font-weight: 800; }
+    .formula { margin-top: 18px; padding: 16px; border-radius: 16px; background: #eef2ff; color: #1f2937; line-height: 1.7; font-size: 14px; }
+    .divider { height: 1px; background: #e5e7eb; margin: 22px 0; }
+    .section-title { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+    .group-box { padding: 14px; border-radius: 16px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .group-box h4 { margin: 0 0 12px; font-size: 15px; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 16px; border: 1px solid #e5e7eb; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; background: white; font-size: 13px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; white-space: nowrap; }
+    th { background: #f3f4f6; font-weight: 800; color: #374151; }
+    td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align: left; }
+    tr:last-child td { border-bottom: none; }
+    .small-text { color: #6b7280; font-size: 13px; line-height: 1.6; }
+    .layer-card { margin-top: 18px; border-radius: 18px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 18px; }
+    .layer-card h3 { margin: 0 0 8px; font-size: 18px; }
+    .chart-wrap { margin-top: 16px; overflow-x: auto; border-radius: 18px; border: 1px solid #e5e7eb; background: white; padding: 12px; }
+    svg text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .bar-label { font-size: 12px; fill: #111827; }
+    .axis-label { font-size: 12px; fill: #4b5563; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } .results { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .three, .two { grid-template-columns: 1fr; } h1 { font-size: 26px; } }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>층별 분할 헬름홀츠 공명기 계산기</h1>
+    <p class="subtitle">
+      좌측 원뿔대, 가운데 원통, 우측 원뿔대 전체 길이를 기준으로 층을 나누고,
+      각 층의 실제 형상 체적을 적분 계산합니다. 원뿔대와 원통이 겹치는 구간도 자동 반영됩니다.
+    </p>
+
+    <section class="grid">
+      <div class="card">
+        <h2>입력값</h2>
+
+        <div class="form-grid">
+          <div>
+            <label for="innerDiameter">중심 얇은 원통 외경 d (mm)</label>
+            <input id="innerDiameter" type="number" value="9" step="0.1" />
+          </div>
+          <div>
+            <label for="outerDiameter">외부 챔버 최대 내경 D (mm)</label>
+            <input id="outerDiameter" type="number" value="44" step="0.1" />
+          </div>
+          <div class="three">
+            <div><label for="leftLength">좌측 원뿔대 길이 (mm)</label><input id="leftLength" type="number" value="15" step="0.1" /></div>
+            <div><label for="cylinderLength">가운데 원통 길이 (mm)</label><input id="cylinderLength" type="number" value="100" step="0.1" /></div>
+            <div><label for="rightLength">우측 원뿔대 길이 (mm)</label><input id="rightLength" type="number" value="15" step="0.1" /></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+          <div class="section-title">길이 방향 층 설정</div>
+          <div>
+            <label for="lengthSectionCount">전체 길이 방향 층 수</label>
+            <select id="lengthSectionCount">
+              <option value="2">2층</option>
+              <option value="3">3층</option>
+              <option value="4">4층</option>
+            </select>
+          </div>
+          <div id="lengthInputs" class="dynamic-inputs" style="margin-top:12px;"></div>
+          <div id="lengthWarning" class="warning"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+          <div class="section-title">층별 원주 방향 분할 설정</div>
+          <div class="note">
+            각 층마다 원주 방향을 <strong>안 나눔</strong> 또는 <strong>3-8개 분할</strong>로 지정할 수 있습니다.<br />
+            각도는 마지막 셀이 자동 계산됩니다.
+          </div>
+          <div id="layerAngleSettings" class="dynamic-inputs" style="margin-top:12px;"></div>
+          <div id="angleWarning" class="warning"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+          <div class="section-title">헬름홀츠 공명기 설정</div>
+          <div class="two">
+            <div><label for="soundSpeed">음속 c (m/s)</label><input id="soundSpeed" type="number" value="210" step="1" /></div>
+            <div><label for="neckLength">목 길이, 얇은 원통 두께 (mm)</label><input id="neckLength" type="number" value="8" step="0.1" /></div>
+          </div>
+          <div class="two" style="margin-top:12px;">
+            <div><label for="holeDiameter">구멍 지름 (mm)</label><input id="holeDiameter" type="number" value="2" step="0.1" /></div>
+            <div><label for="endCorrectionFactor">끝 보정 계수</label><input id="endCorrectionFactor" type="number" value="1.7" step="0.1" /></div>
+          </div>
+        </div>
+
+        <button onclick="resetValues()">기본값으로 초기화</button>
+
+        <div class="formula">
+          <strong>체적 계산 기준</strong><br />
+          각 층 체적: V = ∫ π(R(x)² - r²) dx<br />
+          셀 체적: Vcell = V층 × 각도/360<br />
+          좌측 원뿔대: R(x)는 r에서 R까지 선형 증가<br />
+          중앙 원통: R(x)=R<br />
+          우측 원뿔대: R(x)는 R에서 r까지 선형 감소<br /><br />
+          <strong>공명 주파수</strong><br />
+          f = c/(2π) × √(S/(Vcell × Leff))
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:24px;">
+          <h2>분할 상태 개념도</h2>
+          <p class="small-text">위쪽은 전체 형상 기준 길이 방향 층 분할, 아래쪽은 각 층별 원주 방향 분할입니다.</p>
+          <div class="chart-wrap">
+            <svg id="layoutDiagram" width="980" height="520" aria-label="분할 상태 개념도"></svg>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>전체 요약</h2>
+
+          <div class="results">
+            <div class="result-box">
+              <h3>체적</h3>
+              <div class="row"><span>전체 순수 공간 체적</span><span id="netVolCm">-</span></div>
+              <div class="row"><span>전체 길이</span><span id="totalLengthResult">-</span></div>
+              <div class="row"><span>최대 원통부 순수 단면적</span><span id="annularArea">-</span></div>
+            </div>
+
+            <div class="result-box">
+              <h3>공명 조건</h3>
+              <div class="row"><span>구멍 면적 S</span><span id="holeArea">-</span></div>
+              <div class="row"><span>유효 목 길이 Leff</span><span id="effectiveLength">-</span></div>
+              <div class="row"><span>총 셀 개수</span><span id="cellCount">-</span></div>
+            </div>
+
+            <div class="result-box">
+              <h3>피크 범위</h3>
+              <div class="row"><span>최저 피크</span><span id="minPeak">-</span></div>
+              <div class="row"><span>최고 피크</span><span id="maxPeak">-</span></div>
+              <div class="row"><span>피크 개수</span><span id="peakCount">-</span></div>
+            </div>
+          </div>
+
+          <div class="highlight">
+            <div class="small">공명주파수 피크 범위</div>
+            <div class="big" id="freqRange">-</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2>공명주파수 피크 그래프</h2>
+          <p class="small-text">막대 하나가 셀 하나의 공명 피크입니다. 라벨은 “층-셀” 형식입니다.</p>
+          <div class="chart-wrap">
+            <svg id="peakChart" width="980" height="420" aria-label="공명주파수 피크 그래프"></svg>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2>층별 상세 결과</h2>
+          <div id="layerResults"></div>
+
+          <div id="physicalWarning" class="warning danger"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const defaults = {
+      innerDiameter: 9, outerDiameter: 44, leftLength: 15, cylinderLength: 100, rightLength: 15,
+      lengthSectionCount: 3, soundSpeed: 210, neckLength: 8, holeDiameter: 2, endCorrectionFactor: 1.7
+    };
+
+    const baseIds = ["innerDiameter", "outerDiameter", "leftLength", "cylinderLength", "rightLength", "soundSpeed", "neckLength", "holeDiameter", "endCorrectionFactor"];
+
+    function getNumber(id) {
+      const el = document.getElementById(id);
+      if (!el) return 0;
+      const value = Number(el.value);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function format(value, digits = 2) {
+      if (!Number.isFinite(value)) return "-";
+      return value.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function getTotalLength() {
+      return getNumber("leftLength") + getNumber("cylinderLength") + getNumber("rightLength");
+    }
+
+    function outerRadiusAt(x, rSmall, rLarge, leftLength, cylinderLength, rightLength) {
+      const totalLength = leftLength + cylinderLength + rightLength;
+      if (x <= 0) return rSmall;
+      if (x >= totalLength) return rSmall;
+
+      if (x <= leftLength) {
+        if (leftLength <= 0) return rLarge;
+        return rSmall + (rLarge - rSmall) * (x / leftLength);
+      }
+
+      if (x <= leftLength + cylinderLength) {
+        return rLarge;
+      }
+
+      const xr = x - leftLength - cylinderLength;
+      if (rightLength <= 0) return rSmall;
+      return rLarge - (rLarge - rSmall) * (xr / rightLength);
+    }
+
+    function segmentVolume(x0, x1, rSmall, rLarge, leftLength, cylinderLength, rightLength) {
+      const totalLength = leftLength + cylinderLength + rightLength;
+      x0 = Math.max(0, Math.min(totalLength, x0));
+      x1 = Math.max(0, Math.min(totalLength, x1));
+      if (x1 <= x0) return 0;
+
+      const breakpoints = [x0, x1, leftLength, leftLength + cylinderLength]
+        .filter(v => v > x0 && v < x1)
+        .sort((a, b) => a - b);
+
+      const points = [x0, ...breakpoints, x1];
+      let volume = 0;
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const Ra = outerRadiusAt(a, rSmall, rLarge, leftLength, cylinderLength, rightLength);
+        const Rb = outerRadiusAt(b, rSmall, rLarge, leftLength, cylinderLength, rightLength);
+        const h = b - a;
+
+        const outerFrustumVol = Math.PI * h * (Ra * Ra + Rb * Rb + Ra * Rb) / 3;
+        const innerPipeVol = Math.PI * rSmall * rSmall * h;
+        volume += outerFrustumVol - innerPipeVol;
+      }
+
+      return volume;
+    }
+
+    function wholeVolume(rSmall, rLarge, leftLength, cylinderLength, rightLength) {
+      return segmentVolume(0, leftLength + cylinderLength + rightLength, rSmall, rLarge, leftLength, cylinderLength, rightLength);
+    }
+
+    function getLengthSectionCount() {
+      return Number(document.getElementById("lengthSectionCount").value);
+    }
+
+    function makeLengthInputs() {
+      const count = getLengthSectionCount();
+      const total = getTotalLength();
+      const wrapper = document.getElementById("lengthInputs");
+      wrapper.innerHTML = "";
+      const defaultEditable = total / count;
+
+      for (let i = 1; i <= count; i++) {
+        const isLast = i === count;
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <label for="length${i}">${i}층 길이 (mm)${isLast ? " - 자동 계산" : ""}</label>
+          <input id="length${i}" type="number" step="0.1" value="${defaultEditable.toFixed(2)}" ${isLast ? "disabled" : ""} />
+        `;
+        wrapper.appendChild(div);
+        if (!isLast) {
+          div.querySelector("input").addEventListener("input", () => { updateAutoLength(); calculate(); });
+        }
+      }
+      updateAutoLength();
+    }
+
+    function updateAutoLength() {
+      const count = getLengthSectionCount();
+      const total = getTotalLength();
+      let used = 0;
+      for (let i = 1; i < count; i++) used += getNumber(`length${i}`);
+      const lastInput = document.getElementById(`length${count}`);
+      if (lastInput) lastInput.value = (total - used).toFixed(2);
+    }
+
+    function getLengths() {
+      updateAutoLength();
+      const count = getLengthSectionCount();
+      const lengths = [];
+      for (let i = 1; i <= count; i++) lengths.push(getNumber(`length${i}`));
+      return lengths;
+    }
+
+    function makeLayerAngleSettings(keepExisting = false) {
+      const lengthCount = getLengthSectionCount();
+      const wrapper = document.getElementById("layerAngleSettings");
+      const old = {};
+      if (keepExisting) wrapper.querySelectorAll("select, input").forEach(el => old[el.id] = el.value);
+      wrapper.innerHTML = "";
+
+      for (let layer = 1; layer <= lengthCount; layer++) {
+        const box = document.createElement("div");
+        box.className = "group-box";
+        const splitId = `splitCount_L${layer}`;
+        const splitValue = old[splitId] || "none";
+        box.innerHTML = `
+          <h4>${layer}층 원주 방향 설정</h4>
+          <label for="${splitId}">${layer}층 원주 분할 수</label>
+          <select id="${splitId}">
+            <option value="none" ${splitValue === "none" ? "selected" : ""}>안 나눔, 1셀</option>
+            <option value="3" ${splitValue === "3" ? "selected" : ""}>3개</option>
+            <option value="4" ${splitValue === "4" ? "selected" : ""}>4개</option>
+            <option value="5" ${splitValue === "5" ? "selected" : ""}>5개</option>
+            <option value="6" ${splitValue === "6" ? "selected" : ""}>6개</option>
+            <option value="7" ${splitValue === "7" ? "selected" : ""}>7개</option>
+            <option value="8" ${splitValue === "8" ? "selected" : ""}>8개</option>
+          </select>
+          <div id="angleInputs_L${layer}" class="dynamic-inputs" style="margin-top:12px;"></div>
+        `;
+        wrapper.appendChild(box);
+        document.getElementById(splitId).addEventListener("change", () => {
+          makeAngleInputsForLayer(layer, false);
+          calculate();
+        });
+        makeAngleInputsForLayer(layer, keepExisting, old);
+      }
+    }
+
+    function makeAngleInputsForLayer(layer, keepExisting = false, old = null) {
+      const splitRaw = document.getElementById(`splitCount_L${layer}`).value;
+      const count = splitRaw === "none" ? 1 : Number(splitRaw);
+      const wrapper = document.getElementById(`angleInputs_L${layer}`);
+      const saved = old || {};
+      wrapper.innerHTML = "";
+
+      if (count === 1) {
+        wrapper.innerHTML = `<div><label for="angle_L${layer}_A1">A1 각도 (deg) - 자동</label><input id="angle_L${layer}_A1" type="number" value="360.00" disabled /></div>`;
+        return;
+      }
+
+      const defaultAngle = 360 / count;
+      for (let a = 1; a <= count; a++) {
+        const isLast = a === count;
+        const id = `angle_L${layer}_A${a}`;
+        const value = keepExisting && saved[id] ? saved[id] : defaultAngle.toFixed(2);
+        const div = document.createElement("div");
+        div.innerHTML = `<label for="${id}">A${a} 각도 (deg)${isLast ? " - 자동 계산" : ""}</label><input id="${id}" type="number" step="0.1" value="${value}" ${isLast ? "disabled" : ""} />`;
+        wrapper.appendChild(div);
+        if (!isLast) div.querySelector("input").addEventListener("input", () => { updateAutoAnglesForLayer(layer); calculate(); });
+      }
+      updateAutoAnglesForLayer(layer);
+    }
+
+    function updateAutoAnglesForLayer(layer) {
+      const splitRaw = document.getElementById(`splitCount_L${layer}`).value;
+      const count = splitRaw === "none" ? 1 : Number(splitRaw);
+      if (count === 1) {
+        const input = document.getElementById(`angle_L${layer}_A1`);
+        if (input) input.value = "360.00";
+        return;
+      }
+      let used = 0;
+      for (let a = 1; a < count; a++) used += getNumber(`angle_L${layer}_A${a}`);
+      const lastInput = document.getElementById(`angle_L${layer}_A${count}`);
+      if (lastInput) lastInput.value = (360 - used).toFixed(2);
+    }
+
+    function getAnglesForLayer(layer) {
+      updateAutoAnglesForLayer(layer);
+      const splitRaw = document.getElementById(`splitCount_L${layer}`).value;
+      const count = splitRaw === "none" ? 1 : Number(splitRaw);
+      const angles = [];
+      for (let a = 1; a <= count; a++) angles.push(getNumber(`angle_L${layer}_A${a}`));
+      return angles;
+    }
+
+    function helmholtzFrequency(c, holeAreaM2, volumeM3, leffM) {
+      if (c <= 0 || holeAreaM2 <= 0 || volumeM3 <= 0 || leffM <= 0) return NaN;
+      return (c / (2 * Math.PI)) * Math.sqrt(holeAreaM2 / (volumeM3 * leffM));
+    }
+
+    function drawPeakChart(cells) {
+      const svg = document.getElementById("peakChart");
+      svg.innerHTML = "";
+      const valid = cells.filter(c => Number.isFinite(c.freq) && c.freq > 0);
+      const width = Math.max(980, valid.length * 70 + 120);
+      const height = 420;
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+      const margin = { left: 70, right: 30, top: 35, bottom: 90 };
+      const chartW = width - margin.left - margin.right;
+      const chartH = height - margin.top - margin.bottom;
+      if (!valid.length) return;
+      const yMax = Math.max(...valid.map(c => c.freq)) * 1.15;
+      const yScale = f => margin.top + chartH - (f / yMax) * chartH;
+
+      const addLine = (x1,y1,x2,y2,stroke="#111827") => {
+        const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        l.setAttribute("x1",x1); l.setAttribute("y1",y1); l.setAttribute("x2",x2); l.setAttribute("y2",y2); l.setAttribute("stroke",stroke); svg.appendChild(l);
+      };
+      addLine(margin.left, margin.top + chartH, width - margin.right, margin.top + chartH);
+      addLine(margin.left, margin.top, margin.left, margin.top + chartH);
+
+      for (let i=0;i<=5;i++) {
+        const f = yMax*i/5, y = yScale(f);
+        addLine(margin.left, y, width - margin.right, y, "#e5e7eb");
+        const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+        t.setAttribute("x", margin.left - 10); t.setAttribute("y", y+4); t.setAttribute("text-anchor","end"); t.setAttribute("class","axis-label"); t.textContent = `${Math.round(f)} Hz`; svg.appendChild(t);
+      }
+
+      const barGap = 12;
+      const barW = Math.max(18, Math.min(42, chartW/valid.length - barGap));
+      valid.forEach((cell,i) => {
+        const x = margin.left + i*(chartW/valid.length) + ((chartW/valid.length)-barW)/2;
+        const y = yScale(cell.freq);
+        const h = margin.top + chartH - y;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+        rect.setAttribute("x",x); rect.setAttribute("y",y); rect.setAttribute("width",barW); rect.setAttribute("height",h); rect.setAttribute("rx","6"); rect.setAttribute("fill","#2563eb"); svg.appendChild(rect);
+        const title = document.createElementNS("http://www.w3.org/2000/svg","title");
+        title.textContent = `${cell.layer}층 ${cell.cellInLayer}번 셀: ${cell.freq.toFixed(1)} Hz, ${cell.volumeCm3.toFixed(3)} cm³`; rect.appendChild(title);
+
+        const fText = document.createElementNS("http://www.w3.org/2000/svg","text");
+        fText.setAttribute("x", x+barW/2); fText.setAttribute("y", y-6); fText.setAttribute("text-anchor","middle"); fText.setAttribute("class","bar-label"); fText.textContent = `${cell.freq.toFixed(0)}`; svg.appendChild(fText);
+
+        const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+        label.setAttribute("x", x+barW/2); label.setAttribute("y", margin.top+chartH+22); label.setAttribute("text-anchor","end"); label.setAttribute("transform",`rotate(-45 ${x+barW/2} ${margin.top+chartH+22})`); label.setAttribute("class","axis-label"); label.textContent = `${cell.layer}층-${cell.cellInLayer}`; svg.appendChild(label);
+      });
+    }
+
+    function drawLayoutDiagram(lengths, anglesByLayer, totalLength, leftLength, cylinderLength, rightLength) {
+      const svg = document.getElementById("layoutDiagram");
+      svg.innerHTML = "";
+      const width = 980, topH = 190, layerH = 125, height = topH + lengths.length*layerH + 40;
+      svg.setAttribute("width", width); svg.setAttribute("height", height);
+
+      const addText = (x,y,text,size=13,weight="500",anchor="middle",fill="#111827") => {
+        const e = document.createElementNS("http://www.w3.org/2000/svg","text");
+        e.setAttribute("x",x); e.setAttribute("y",y); e.setAttribute("font-size",size); e.setAttribute("font-weight",weight); e.setAttribute("text-anchor",anchor); e.setAttribute("fill",fill); e.textContent=text; svg.appendChild(e); return e;
+      };
+      const addLine = (x1,y1,x2,y2,stroke="#111827",sw=2,dash="") => {
+        const e = document.createElementNS("http://www.w3.org/2000/svg","line");
+        e.setAttribute("x1",x1); e.setAttribute("y1",y1); e.setAttribute("x2",x2); e.setAttribute("y2",y2); e.setAttribute("stroke",stroke); e.setAttribute("stroke-width",sw); if(dash)e.setAttribute("stroke-dasharray",dash); svg.appendChild(e); return e;
+      };
+
+      addText(30,28,"전체 길이 기준 층 분할",15,"800","start");
+      const x0=80, x1=900, y0=70, bodyH=70;
+      const bodyW = x1-x0;
+      const leftX = x0 + bodyW*leftLength/totalLength;
+      const cylEndX = x0 + bodyW*(leftLength+cylinderLength)/totalLength;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+      path.setAttribute("d",`M${x0} ${y0+bodyH/2} L${leftX} ${y0} L${cylEndX} ${y0} L${x1} ${y0+bodyH/2} L${cylEndX} ${y0+bodyH} L${leftX} ${y0+bodyH} Z`);
+      path.setAttribute("fill","#f9fafb"); path.setAttribute("stroke","#111827"); path.setAttribute("stroke-width","3"); svg.appendChild(path);
+      const pipe = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      pipe.setAttribute("x",60); pipe.setAttribute("y",y0+24); pipe.setAttribute("width",860); pipe.setAttribute("height",22); pipe.setAttribute("rx",11); pipe.setAttribute("fill","#d1d5db"); pipe.setAttribute("stroke","#111827"); pipe.setAttribute("stroke-width",2); svg.appendChild(pipe);
+      addLine(leftX,y0-8,leftX,y0+bodyH+8,"#9ca3af",2,"7 7");
+      addLine(cylEndX,y0-8,cylEndX,y0+bodyH+8,"#9ca3af",2,"7 7");
+      addText((x0+leftX)/2,y0-14,"좌 원뿔대",12,"700");
+      addText((leftX+cylEndX)/2,y0-14,"원통",12,"700");
+      addText((cylEndX+x1)/2,y0-14,"우 원뿔대",12,"700");
+
+      let acc=0;
+      lengths.forEach((len,i)=>{
+        const start = x0 + bodyW*acc/totalLength;
+        acc += len;
+        const end = x0 + bodyW*acc/totalLength;
+        const mid = (start+end)/2;
+        if(i < lengths.length-1) addLine(end,y0,end,y0+bodyH,"#ef4444",4);
+        addText(mid,y0+bodyH+24,`${i+1}층 ${format(len)} mm`,12,"700","middle","#4b5563");
+      });
+
+      addText(30, topH-18, "층별 원주 방향 분할", 15, "800", "start");
+      const colors = ["#dbeafe","#dcfce7","#fef3c7","#fee2e2","#ede9fe","#cffafe","#fae8ff","#e5e7eb"];
+      lengths.forEach((len,l)=>{
+        const cy = topH + l*layerH + 62, cx=115, rOuter=42, rInner=14;
+        const angles = anglesByLayer[l] || [360];
+        addText(30,cy-48,`${l+1}층`,15,"800","start");
+        addText(170,cy-48,`길이 ${format(len)} mm / ${angles.length===1 ? "안 나눔" : angles.length+"분할"}`,13,"600","start","#4b5563");
+        let startDeg=-90;
+        angles.forEach((angle,aIdx)=>{
+          const endDeg=startDeg+angle, largeArc=angle>180?1:0;
+          const xA1=cx+rOuter*Math.cos(startDeg*Math.PI/180), yA1=cy+rOuter*Math.sin(startDeg*Math.PI/180);
+          const xA2=cx+rOuter*Math.cos(endDeg*Math.PI/180), yA2=cy+rOuter*Math.sin(endDeg*Math.PI/180);
+          const xI2=cx+rInner*Math.cos(endDeg*Math.PI/180), yI2=cy+rInner*Math.sin(endDeg*Math.PI/180);
+          const xI1=cx+rInner*Math.cos(startDeg*Math.PI/180), yI1=cy+rInner*Math.sin(startDeg*Math.PI/180);
+          const sector=document.createElementNS("http://www.w3.org/2000/svg","path");
+          sector.setAttribute("d",`M ${xA1} ${yA1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${xA2} ${yA2} L ${xI2} ${yI2} A ${rInner} ${rInner} 0 ${largeArc} 0 ${xI1} ${yI1} Z`);
+          sector.setAttribute("fill",colors[aIdx%colors.length]); sector.setAttribute("stroke","#111827"); sector.setAttribute("stroke-width","1.5"); svg.appendChild(sector);
+          const midDeg=startDeg+angle/2;
+          addText(cx+64*Math.cos(midDeg*Math.PI/180), cy+64*Math.sin(midDeg*Math.PI/180)+4, `A${aIdx+1}`, 12, "800");
+          startDeg=endDeg;
+        });
+      });
+    }
+
+    function calculate() {
+      updateAutoLength();
+
+      const dSmall = getNumber("innerDiameter");
+      const dLarge = getNumber("outerDiameter");
+      const leftLength = getNumber("leftLength");
+      const cylinderLength = getNumber("cylinderLength");
+      const rightLength = getNumber("rightLength");
+      const totalLength = leftLength + cylinderLength + rightLength;
+      const soundSpeed = getNumber("soundSpeed");
+      const neckLength = getNumber("neckLength");
+      const holeDiameter = getNumber("holeDiameter");
+      const endCorrectionFactor = getNumber("endCorrectionFactor");
+
+      const rSmall = dSmall / 2;
+      const rLarge = dLarge / 2;
+      const maxAnnularArea = Math.PI * (rLarge * rLarge - rSmall * rSmall);
+      const netVol = wholeVolume(rSmall, rLarge, leftLength, cylinderLength, rightLength);
+
+      const holeRadius = holeDiameter / 2;
+      const holeAreaMm2 = Math.PI * holeRadius * holeRadius;
+      const leffMm = neckLength + endCorrectionFactor * holeRadius;
+      const holeAreaM2 = holeAreaMm2 * 1e-6;
+      const leffM = leffMm * 1e-3;
+
+      const lengths = getLengths();
+      const cells = [];
+      const anglesByLayer = [];
+      const layerResults = document.getElementById("layerResults");
+      layerResults.innerHTML = "";
+
+      let xStart = 0;
+      let globalIndex = 1;
+      let badAngle = false;
+
+      lengths.forEach((length, layerIndex) => {
+        const layer = layerIndex + 1;
+        const xEnd = xStart + length;
+        const angles = getAnglesForLayer(layer);
+        anglesByLayer.push(angles);
+        const layerVolume = segmentVolume(xStart, xEnd, rSmall, rLarge, leftLength, cylinderLength, rightLength);
+        if (angles.some(a => a <= 0)) badAngle = true;
+
+        const layerBox = document.createElement("div");
+        layerBox.className = "layer-card";
+        layerBox.innerHTML = `
+          <h3>${layer}층 결과</h3>
+          <div class="row"><span>축방향 위치</span><span>${format(xStart)} - ${format(xEnd)} mm</span></div>
+          <div class="row"><span>층 길이</span><span>${format(length)} mm</span></div>
+          <div class="row"><span>층 실제 체적</span><span>${format(layerVolume)} mm³ / ${format(layerVolume / 1000)} cm³</span></div>
+          <div class="row"><span>원주 분할 수</span><span>${angles.length === 1 ? "안 나눔, 1셀" : angles.length + "셀"}</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>셀</th>
+                  <th>각도</th>
+                  <th>체적 (mm³)</th>
+                  <th>체적 (cm³)</th>
+                  <th>공명주파수 (Hz)</th>
+                </tr>
+              </thead>
+              <tbody id="layerTable_${layer}"></tbody>
+            </table>
+          </div>
+        `;
+        layerResults.appendChild(layerBox);
+
+        const tbody = document.getElementById(`layerTable_${layer}`);
+        angles.forEach((angle, angleIndex) => {
+          const volumeMm3 = layerVolume * (angle / 360);
+          const volumeCm3 = volumeMm3 / 1000;
+          const freq = helmholtzFrequency(soundSpeed, holeAreaM2, volumeMm3 * 1e-9, leffM);
+          const cell = { globalIndex, layer, cellInLayer: angleIndex + 1, length, angle, volumeMm3, volumeCm3, freq };
+          cells.push(cell);
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${layer}층-${angleIndex + 1}</td>
+            <td>${format(angle)} deg</td>
+            <td>${format(volumeMm3)}</td>
+            <td>${format(volumeCm3)}</td>
+            <td>${Number.isFinite(freq) ? format(freq, 1) : "-"}</td>
+          `;
+          tbody.appendChild(tr);
+          globalIndex++;
+        });
+
+        xStart = xEnd;
+      });
+
+      const freqs = cells.map(c => c.freq).filter(f => Number.isFinite(f) && f > 0);
+      document.getElementById("annularArea").textContent = `${format(maxAnnularArea)} mm²`;
+      document.getElementById("netVolCm").textContent = `${format(netVol)} mm³ / ${format(netVol / 1000)} cm³`;
+      document.getElementById("totalLengthResult").textContent = `${format(totalLength)} mm`;
+      document.getElementById("holeArea").textContent = `${format(holeAreaMm2)} mm²`;
+      document.getElementById("effectiveLength").textContent = `${format(leffMm)} mm`;
+      document.getElementById("cellCount").textContent = `${cells.length}개`;
+
+      if (freqs.length) {
+        const minF = Math.min(...freqs);
+        const maxF = Math.max(...freqs);
+        const minCell = cells.find(c => c.freq === minF);
+        const maxCell = cells.find(c => c.freq === maxF);
+        document.getElementById("freqRange").textContent = `${format(minF, 1)} - ${format(maxF, 1)} Hz`;
+        document.getElementById("minPeak").textContent = `${format(minF, 1)} Hz (${minCell.layer}층-${minCell.cellInLayer})`;
+        document.getElementById("maxPeak").textContent = `${format(maxF, 1)} Hz (${maxCell.layer}층-${maxCell.cellInLayer})`;
+        document.getElementById("peakCount").textContent = `${freqs.length}개`;
+      } else {
+        document.getElementById("freqRange").textContent = "-";
+        document.getElementById("minPeak").textContent = "-";
+        document.getElementById("maxPeak").textContent = "-";
+        document.getElementById("peakCount").textContent = "0개";
+      }
+
+      drawPeakChart(cells);
+      drawLayoutDiagram(lengths, anglesByLayer, totalLength, leftLength, cylinderLength, rightLength);
+
+      const lengthWarning = document.getElementById("lengthWarning");
+      if (lengths.some(v => v <= 0)) {
+        lengthWarning.style.display = "block";
+        lengthWarning.textContent = "주의: 자동 계산된 마지막 길이가 0 이하입니다. 앞 층 길이 합이 전체 길이보다 작아야 합니다.";
+      } else {
+        lengthWarning.style.display = "none";
+      }
+
+      const angleWarning = document.getElementById("angleWarning");
+      if (badAngle) {
+        angleWarning.style.display = "block";
+        angleWarning.textContent = "주의: 어떤 층의 자동 계산 각도가 0도 이하입니다. 해당 층의 앞 각도 합이 360도보다 작아야 합니다.";
+      } else {
+        angleWarning.style.display = "none";
+      }
+
+      const physicalWarning = document.getElementById("physicalWarning");
+      const warnings = [];
+      if (dLarge <= dSmall) warnings.push("외부 챔버 최대 내경 D는 중심 얇은 원통 외경 d보다 커야 합니다.");
+      if (holeDiameter <= 0) warnings.push("구멍 지름은 0보다 커야 합니다.");
+      if (neckLength <= 0) warnings.push("목 길이는 0보다 커야 합니다.");
+      if (soundSpeed <= 0) warnings.push("음속은 0보다 커야 합니다.");
+      if (totalLength <= 0) warnings.push("전체 길이는 0보다 커야 합니다.");
+      if (warnings.length) {
+        physicalWarning.style.display = "block";
+        physicalWarning.innerHTML = warnings.join("<br>");
+      } else {
+        physicalWarning.style.display = "none";
+      }
+    }
+
+    function resetValues() {
+      document.getElementById("innerDiameter").value = defaults.innerDiameter;
+      document.getElementById("outerDiameter").value = defaults.outerDiameter;
+      document.getElementById("leftLength").value = defaults.leftLength;
+      document.getElementById("cylinderLength").value = defaults.cylinderLength;
+      document.getElementById("rightLength").value = defaults.rightLength;
+      document.getElementById("lengthSectionCount").value = defaults.lengthSectionCount;
+      document.getElementById("soundSpeed").value = defaults.soundSpeed;
+      document.getElementById("neckLength").value = defaults.neckLength;
+      document.getElementById("holeDiameter").value = defaults.holeDiameter;
+      document.getElementById("endCorrectionFactor").value = defaults.endCorrectionFactor;
+      makeLengthInputs();
+      makeLayerAngleSettings(false);
+      calculate();
+    }
+
+    baseIds.forEach(id => {
+      document.getElementById(id).addEventListener("input", () => {
+        if (id === "cylinderLength" || id === "leftLength" || id === "rightLength") makeLengthInputs();
+        calculate();
+      });
+    });
+
+    document.getElementById("lengthSectionCount").addEventListener("change", () => {
+      makeLengthInputs();
+      makeLayerAngleSettings(false);
+      calculate();
+    });
+
+    makeLengthInputs();
+    makeLayerAngleSettings(false);
+    calculate();
+  </script>
+</body>
+</html>
