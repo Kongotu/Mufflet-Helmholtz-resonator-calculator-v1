@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partitioned Helmholtz Resonator Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,"Noto Sans KR","Microsoft YaHei",sans-serif;background:#f3f4f6;color:#111827}
+header{background:#0f172a;color:white;padding:14px 22px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:20px;margin:0}
+.langs button{margin-left:8px;border:0;border-radius:999px;padding:8px 14px;background:#1f2937;color:white;cursor:pointer}
+.langs button.active{background:white;color:#0f172a;font-weight:800}
+main{max-width:1500px;margin:0 auto;padding:18px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+.card{background:white;border-radius:16px;padding:18px;box-shadow:0 4px 16px #0001;margin-bottom:18px}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:16px;margin:0 0 10px}
+label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:#374151}
+input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:white}
+input:disabled{background:#f3f4f6;color:#6b7280}
+.two,.three{display:grid;gap:10px}.two{grid-template-columns:1fr 1fr}.three{grid-template-columns:1fr 1fr 1fr}
+.stack{display:grid;gap:12px}
+.divider{height:1px;background:#e5e7eb;margin:16px 0}
+.note{background:#f3f4f6;border-radius:12px;padding:12px;color:#4b5563;font-size:13px;line-height:1.5}
+.group{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+button.reset{width:100%;padding:12px;border:0;border-radius:12px;background:#2563eb;color:white;font-weight:800;cursor:pointer;margin-top:14px}
+.warning{display:none;background:#fff7ed;color:#9a3412;border-radius:12px;padding:10px;font-size:13px;margin-top:10px}
+.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:14px;text-align:center}
+.metric .label{font-size:13px;color:#64748b}
+.metric .value{font-size:22px;font-weight:900;margin-top:6px;color:#1d4ed8}
+.flex{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+.table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:white}
+th,td{padding:9px 10px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap}
+th{background:#f1f5f9;color:#334155}
+td:first-child,th:first-child{text-align:left}
+svg text{font-family:Arial,"Noto Sans KR","Microsoft YaHei",sans-serif}
+.donut-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+.donut-card{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}
+.donut-card h3{margin-bottom:4px}
+.small{font-size:12px;color:#64748b}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{display:inline-block;width:28px;height:12px;border-radius:3px}
+@media(max-width:1100px){.grid,.flex{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}.three{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="appTitle"></h1>
+  <div class="langs">
+    <button onclick="setLang('ko')" id="bko">한국어</button>
+    <button onclick="setLang('en')" id="ben">English</button>
+    <button onclick="setLang('zh')" id="bzh">中文</button>
+  </div>
+</header>
+
+<main>
+<div class="grid">
+  <aside>
+    <div class="card">
+      <h2 id="inputTitle"></h2>
+      <div class="stack">
+        <div class="three">
+          <div><label id="leftLbl"></label><input id="leftL" type="number" value="15" step="0.1"></div>
+          <div><label id="centerLbl"></label><input id="centerL" type="number" value="100" step="0.1"></div>
+          <div><label id="rightLbl"></label><input id="rightL" type="number" value="15" step="0.1"></div>
+        </div>
+        <div class="two">
+          <div><label id="outerLbl"></label><input id="D" type="number" value="44" step="0.1"></div>
+          <div><label id="innerLbl"></label><input id="d" type="number" value="9" step="0.1"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <h3 id="axialTitle"></h3>
+      <label id="layerCountLbl"></label>
+      <select id="layerCount">
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+      </select>
+      <div id="lengthInputs" class="stack" style="margin-top:12px"></div>
+      <div id="lengthWarn" class="warning"></div>
+
+      <div class="divider"></div>
+      <h3 id="circTitle"></h3>
+      <div class="note" id="circNote"></div>
+      <div id="circInputs" class="stack" style="margin-top:12px"></div>
+      <div id="angleWarn" class="warning"></div>
+
+      <div class="divider"></div>
+      <h3 id="calcCondTitle"></h3>
+      <div class="two">
+        <div><label id="soundLbl"></label><input id="c" type="number" value="210" step="1"></div>
+        <div><label id="neckLbl"></label><input id="neck" type="number" value="8" step="0.1"></div>
+      </div>
+      <div class="two" style="margin-top:10px">
+        <div><label id="holeLbl"></label><input id="hole" type="number" value="2" step="0.1"></div>
+        <div><label id="corrLbl"></label><input id="corr" type="number" value="1.7" step="0.1"></div>
+      </div>
+      <button class="reset" onclick="resetAll()" id="resetBtn"></button>
+    </div>
+  </aside>
+
+  <section>
+    <div class="card">
+      <h2 id="shapeTitle"></h2>
+      <svg id="shapeSvg" width="100%" height="300" viewBox="0 0 1100 300"></svg>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="flex">
+      <div class="card">
+        <h2 id="donutTitle"></h2>
+        <div id="donutArea" class="donut-grid"></div>
+      </div>
+      <div class="card">
+        <h2 id="chartTitle"></h2>
+        <svg id="peakSvg" width="100%" height="420" viewBox="0 0 700 420"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="tableTitle"></h2>
+      <div id="layerTables"></div>
+    </div>
+
+    <div class="card">
+      <div class="summary">
+        <div class="metric"><div class="label" id="mCellsLbl"></div><div class="value" id="mCells"></div></div>
+        <div class="metric"><div class="label" id="mVolLbl"></div><div class="value" id="mVol"></div></div>
+        <div class="metric"><div class="label" id="mRangeLbl"></div><div class="value" id="mRange"></div></div>
+        <div class="metric"><div class="label" id="mMinLbl"></div><div class="value" id="mMin"></div></div>
+        <div class="metric"><div class="label" id="mMaxLbl"></div><div class="value" id="mMax"></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<script>
+const T={
+ko:{title:"분할형 헬름홀츠 공명기 계산기",input:"1. 기본 형상 입력",left:"좌 원뿔대 길이 X (mm)",center:"원통 길이 Lc (mm)",right:"우 원뿔대 길이 X (mm)",outer:"최대 외경 D (mm)",inner:"내경 d (mm)",axial:"2. 축방향 분할 설정",layerCount:"축 방향 층 수",layer:"층",length:"길이",auto:"자동 계산",circ:"3. 각 층 원주 방향 분할 설정",circNote:"각 층을 원주 방향으로 안 나눔 또는 3-8개 구간으로 분할합니다. 마지막 각도는 자동 계산됩니다.",circSet:"원주 방향 설정",circCount:"분할 수",noSplit:"안 나눔",pieces:"분할",angle:"각도",calcCond:"4. 계산 조건",sound:"음속 (m/s)",neck:"목 길이 / 두께 (mm)",hole:"구멍 지름 (mm)",corr:"끝 보정 계수",reset:"초기화",shape:"5. 형상 및 축방향 분할",donut:"6. 원주 방향 분할 (각 층별)",table:"7. 분할 셀 정보 및 공명 주파수",chart:"8. 공명 주파수 피크 분포",cells:"총 셀 개수",vol:"총 체적",range:"공명 주파수 범위",min:"최저 피크",max:"최고 피크",leftF:"좌 원뿔대",cyl:"원통",rightF:"우 원뿔대",total:"총 길이",cell:"셀",deg:"각도 범위",v:"체적",f:"공명 주파수",warnL:"마지막 층 길이가 0 이하입니다.",warnA:"마지막 각도가 0도 이하인 층이 있습니다."},
+en:{title:"Partitioned Helmholtz Resonator Calculator",input:"1. Basic Geometry",left:"Left frustum length X (mm)",center:"Cylinder length Lc (mm)",right:"Right frustum length X (mm)",outer:"Max diameter D (mm)",inner:"Inner diameter d (mm)",axial:"2. Axial Split Settings",layerCount:"Number of axial layers",layer:"Layer",length:"Length",auto:"auto",circ:"3. Circumferential Split by Layer",circNote:"Each layer can be unsplit or divided into 3-8 circumferential sectors. The last angle is calculated automatically.",circSet:"circumferential setting",circCount:"Split count",noSplit:"No split",pieces:"sectors",angle:"Angle",calcCond:"4. Calculation Conditions",sound:"Sound speed (m/s)",neck:"Neck length / thickness (mm)",hole:"Hole diameter (mm)",corr:"End correction factor",reset:"Reset",shape:"5. Shape and Axial Split",donut:"6. Circumferential Split by Layer",table:"7. Cell Volumes and Resonance Frequencies",chart:"8. Resonance Peak Distribution",cells:"Total cells",vol:"Total volume",range:"Frequency range",min:"Lowest peak",max:"Highest peak",leftF:"Left frustum",cyl:"Cylinder",rightF:"Right frustum",total:"Total length",cell:"Cell",deg:"Angle range",v:"Volume",f:"Resonance freq.",warnL:"The last layer length is 0 or negative.",warnA:"A last angle is 0° or negative."},
+zh:{title:"分割式亥姆霍兹共鸣器计算器",input:"1. 基本形状输入",left:"左圆台长度 X (mm)",center:"圆柱长度 Lc (mm)",right:"右圆台长度 X (mm)",outer:"最大直径 D (mm)",inner:"内径 d (mm)",axial:"2. 轴向分层设置",layerCount:"轴向层数",layer:"层",length:"长度",auto:"自动计算",circ:"3. 各层圆周方向分割设置",circNote:"每一层可以不分割，或分成3-8个圆周扇区。最后一个角度会自动计算。",circSet:"圆周方向设置",circCount:"分割数",noSplit:"不分割",pieces:"个",angle:"角度",calcCond:"4. 计算条件",sound:"声速 (m/s)",neck:"颈部长度 / 厚度 (mm)",hole:"孔径 (mm)",corr:"端部修正系数",reset:"重置",shape:"5. 形状及轴向分割",donut:"6. 各层圆周方向分割",table:"7. 单元体积与共鸣频率",chart:"8. 共鸣频率峰值分布",cells:"总单元数",vol:"总体积",range:"频率范围",min:"最低峰值",max:"最高峰值",leftF:"左圆台",cyl:"圆柱",rightF:"右圆台",total:"总长度",cell:"单元",deg:"角度范围",v:"体积",f:"共鸣频率",warnL:"最后一层长度小于或等于0。",warnA:"某一层最后角度小于或等于0。"}
+};
+let lang="ko";
+const $=id=>document.getElementById(id);
+function tr(k){return T[lang][k]||k}
+function n(id){const v=Number($(id).value);return Number.isFinite(v)?v:0}
+function fmt(v,d=2){return Number.isFinite(v)?v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}):"-"}
+
+function setLang(l){lang=l;["ko","en","zh"].forEach(x=>$("b"+x).classList.toggle("active",x===l));renderText();buildLengths(true);buildCirc(true);calc();}
+function renderText(){
+$("appTitle").textContent=tr("title");$("inputTitle").textContent=tr("input");$("leftLbl").textContent=tr("left");$("centerLbl").textContent=tr("center");$("rightLbl").textContent=tr("right");$("outerLbl").textContent=tr("outer");$("innerLbl").textContent=tr("inner");
+$("axialTitle").textContent=tr("axial");$("layerCountLbl").textContent=tr("layerCount");$("circTitle").textContent=tr("circ");$("circNote").textContent=tr("circNote");$("calcCondTitle").textContent=tr("calcCond");$("soundLbl").textContent=tr("sound");$("neckLbl").textContent=tr("neck");$("holeLbl").textContent=tr("hole");$("corrLbl").textContent=tr("corr");$("resetBtn").textContent=tr("reset");$("shapeTitle").textContent=tr("shape");$("donutTitle").textContent=tr("donut");$("tableTitle").textContent=tr("table");$("chartTitle").textContent=tr("chart");$("mCellsLbl").textContent=tr("cells");$("mVolLbl").textContent=tr("vol");$("mRangeLbl").textContent=tr("range");$("mMinLbl").textContent=tr("min");$("mMaxLbl").textContent=tr("max");
+}
+function totalL(){return n("leftL")+n("centerL")+n("rightL")}
+function R(x,r0,r1,ll,cl,rl){const L=ll+cl+rl;if(x<=0||x>=L)return r0;if(x<=ll)return r0+(r1-r0)*x/ll;if(x<=ll+cl)return r1;return r1-(r1-r0)*(x-ll-cl)/rl}
+function segV(x0,x1,r0,r1,ll,cl,rl){const L=ll+cl+rl;x0=Math.max(0,Math.min(L,x0));x1=Math.max(0,Math.min(L,x1));let pts=[x0,x1,ll,ll+cl].filter(v=>v>=x0&&v<=x1).sort((a,b)=>a-b);pts=[...new Set(pts.map(v=>Math.round(v*1e6)/1e6))];let V=0;for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],h=b-a,Ra=R(a,r0,r1,ll,cl,rl),Rb=R(b,r0,r1,ll,cl,rl);V+=Math.PI*h*(Ra*Ra+Rb*Rb+Ra*Rb)/3-Math.PI*r0*r0*h}return V}
+function buildLengths(keep=false){const c=Number($("layerCount").value),L=totalL(),old={};if(keep)for(let i=1;i<=c;i++){const e=$("len"+i);if(e)old[i]=e.value}$("lengthInputs").innerHTML="";for(let i=1;i<=c;i++){const last=i===c,d=document.createElement("div");d.innerHTML=`<label>${i}${tr("layer")} ${tr("length")} (mm)${last?" - "+tr("auto"):""}</label><input id="len${i}" type="number" step="0.1" value="${old[i]||((L/c).toFixed(2))}" ${last?"disabled":""}>`;$("lengthInputs").appendChild(d);if(!last)d.querySelector("input").addEventListener("input",()=>{autoLen();calc()})}autoLen()}
+function autoLen(){const c=Number($("layerCount").value),L=totalL();let used=0;for(let i=1;i<c;i++)used+=n("len"+i);$("len"+c).value=(L-used).toFixed(2)}
+function lens(){autoLen();const c=Number($("layerCount").value);return Array.from({length:c},(_,i)=>n("len"+(i+1)))}
+function buildCirc(keep=false){const lc=Number($("layerCount").value),old={};if(keep)$("circInputs").querySelectorAll("input,select").forEach(e=>old[e.id]=e.value);$("circInputs").innerHTML="";for(let l=1;l<=lc;l++){const g=document.createElement("div");g.className="group";g.innerHTML=`<h4>${l}${tr("layer")} ${tr("circSet")}</h4><label>${tr("circCount")}</label><select id="split${l}"><option value="none">${tr("noSplit")}</option><option value="3">3${tr("pieces")}</option><option value="4">4${tr("pieces")}</option><option value="5">5${tr("pieces")}</option><option value="6">6${tr("pieces")}</option><option value="7">7${tr("pieces")}</option><option value="8">8${tr("pieces")}</option></select><div id="angBox${l}" class="stack" style="margin-top:10px"></div>`;$("circInputs").appendChild(g);if(old["split"+l])$("split"+l).value=old["split"+l];$("split"+l).addEventListener("change",()=>{buildAng(l,old);calc()});buildAng(l,old)}}
+function buildAng(l,old={}){const raw=$("split"+l).value,c=raw==="none"?1:Number(raw),box=$("angBox"+l);box.innerHTML="";if(c===1){box.innerHTML=`<label>A1 ${tr("angle")} - ${tr("auto")}</label><input id="ang${l}_1" value="360.00" disabled>`;return}for(let i=1;i<=c;i++){const last=i===c,id=`ang${l}_${i}`,d=document.createElement("div");d.innerHTML=`<label>A${i} ${tr("angle")} (deg)${last?" - "+tr("auto"):""}</label><input id="${id}" type="number" step="0.1" value="${old[id]||((360/c).toFixed(2))}" ${last?"disabled":""}>`;box.appendChild(d);if(!last)d.querySelector("input").addEventListener("input",()=>{autoAng(l);calc()})}autoAng(l)}
+function autoAng(l){const raw=$("split"+l).value,c=raw==="none"?1:Number(raw);if(c===1){$("ang"+l+"_1").value="360.00";return}let used=0;for(let i=1;i<c;i++)used+=n(`ang${l}_${i}`);$(`ang${l}_${c}`).value=(360-used).toFixed(2)}
+function angles(l){autoAng(l);const raw=$("split"+l).value,c=raw==="none"?1:Number(raw);return Array.from({length:c},(_,i)=>n(`ang${l}_${i+1}`))}
+function hh(c,S,V,L){return c>0&&S>0&&V>0&&L>0?(c/(2*Math.PI))*Math.sqrt(S/(V*L)):NaN}
+
+function sectorPath(cx,cy,ro,ri,startDeg,endDeg){const sd=(startDeg-90)*Math.PI/180,ed=(endDeg-90)*Math.PI/180,large=(endDeg-startDeg)>180?1:0;const x1=cx+ro*Math.cos(sd),y1=cy+ro*Math.sin(sd),x2=cx+ro*Math.cos(ed),y2=cy+ro*Math.sin(ed),x3=cx+ri*Math.cos(ed),y3=cy+ri*Math.sin(ed),x4=cx+ri*Math.cos(sd),y4=cy+ri*Math.sin(sd);return `M ${x1} ${y1} A ${ro} ${ro} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ri} ${ri} 0 ${large} 0 ${x4} ${y4} Z`}
+
+function drawDonuts(ls,angSets){const area=$("donutArea");area.innerHTML="";const colors=["#dbeafe","#dcfce7","#fef3c7","#fee2e2","#ede9fe","#cffafe","#fae8ff","#e5e7eb"];ls.forEach((len,i)=>{const div=document.createElement("div");div.className="donut-card";div.innerHTML=`<h3>${i+1}${tr("layer")}</h3><div class="small">${tr("length")} ${fmt(len)} mm / ${angSets[i].length}${tr("pieces")}</div><svg width="190" height="170" viewBox="0 0 190 170" id="donut${i}"></svg>`;area.appendChild(div);const svg=$("donut"+i),cx=95,cy=85,ro=58,ri=22;let start=0;angSets[i].forEach((a,ai)=>{const path=document.createElementNS("http://www.w3.org/2000/svg","path");path.setAttribute("d",sectorPath(cx,cy,ro,ri,start,start+a));path.setAttribute("fill",colors[ai%colors.length]);path.setAttribute("stroke","#111827");path.setAttribute("stroke-width","1.3");svg.appendChild(path);const mid=(start+a/2-90)*Math.PI/180;const tx=cx+75*Math.cos(mid),ty=cy+75*Math.sin(mid);const text=document.createElementNS("http://www.w3.org/2000/svg","text");text.setAttribute("x",tx);text.setAttribute("y",ty);text.setAttribute("text-anchor","middle");text.setAttribute("font-size","11");text.textContent=`A${ai+1}`;svg.appendChild(text);start+=a})})}
+
+function drawShape(ls,angSets){const svg=$("shapeSvg");svg.innerHTML="";const W=1100,H=300,x0=60,x1=1040,y=120,bh=80,L=totalL(),ll=n("leftL"),cl=n("centerL"),rl=n("rightL"),bw=x1-x0,lx=x0+bw*ll/L,cx=x0+bw*(ll+cl)/L;
+function txt(x,yv,s,size=13,w=700,a="middle"){const e=document.createElementNS("http://www.w3.org/2000/svg","text");e.setAttribute("x",x);e.setAttribute("y",yv);e.setAttribute("font-size",size);e.setAttribute("font-weight",w);e.setAttribute("text-anchor",a);e.textContent=s;svg.appendChild(e)}
+function line(a,b,c,d,col="#111827",sw=2,dash=""){const e=document.createElementNS("http://www.w3.org/2000/svg","line");e.setAttribute("x1",a);e.setAttribute("y1",b);e.setAttribute("x2",c);e.setAttribute("y2",d);e.setAttribute("stroke",col);e.setAttribute("stroke-width",sw);if(dash)e.setAttribute("stroke-dasharray",dash);svg.appendChild(e)}
+const body=document.createElementNS("http://www.w3.org/2000/svg","path");body.setAttribute("d",`M${x0} ${y} L${lx} ${y-bh/2} L${cx} ${y-bh/2} L${x1} ${y} L${cx} ${y+bh/2} L${lx} ${y+bh/2} Z`);body.setAttribute("fill","#f8fafc");body.setAttribute("stroke","#111827");body.setAttribute("stroke-width","3");svg.appendChild(body);
+const pipe=document.createElementNS("http://www.w3.org/2000/svg","rect");pipe.setAttribute("x",35);pipe.setAttribute("y",y-13);pipe.setAttribute("width",1030);pipe.setAttribute("height",26);pipe.setAttribute("rx",13);pipe.setAttribute("fill","#d1d5db");pipe.setAttribute("stroke","#111827");pipe.setAttribute("stroke-width","2");svg.appendChild(pipe);
+txt((x0+lx)/2,35,tr("leftF"));txt((lx+cx)/2,35,tr("cyl"));txt((cx+x1)/2,35,tr("rightF"));line(lx,45,lx,210,"#94a3b8",2,"8 8");line(cx,45,cx,210,"#94a3b8",2,"8 8");
+const colors=["#bfdbfe","#bbf7d0","#fed7aa","#ddd6fe"];let pos=0;$("legend").innerHTML="";
+ls.forEach((len,i)=>{const st=x0+bw*pos/L;pos+=len;const en=x0+bw*pos/L;const rect=document.createElementNS("http://www.w3.org/2000/svg","rect");rect.setAttribute("x",st);rect.setAttribute("y",y-bh/2);rect.setAttribute("width",en-st);rect.setAttribute("height",bh);rect.setAttribute("fill",colors[i%colors.length]);rect.setAttribute("opacity",".45");rect.setAttribute("stroke",["#2563eb","#16a34a","#f97316","#7c3aed"][i%4]);rect.setAttribute("stroke-width","2");svg.appendChild(rect);if(i>0)line(st,y-bh/2,st,y+bh/2,"#ef4444",4);txt((st+en)/2,235,`${i+1}${tr("layer")} ${fmt(len)} mm`,13,700);$("legend").innerHTML+=`<span><i class="sw" style="background:${colors[i%4]};border:1px solid #999"></i>${i+1}${tr("layer")} (${angSets[i].length}${tr("pieces")})</span>`});txt((x0+x1)/2,275,`${tr("total")} = ${fmt(L)} mm`,14,800)}
+
+function drawChart(cells){const svg=$("peakSvg");svg.innerHTML="";const valid=cells.filter(c=>Number.isFinite(c.f));if(!valid.length)return;const W=700,H=420,m={l:60,r:20,t:30,b:70},cw=W-m.l-m.r,ch=H-m.t-m.b,ymax=Math.max(...valid.map(c=>c.f))*1.15;function y(f){return m.t+ch-f/ymax*ch}function line(x1,y1,x2,y2,col="#111827",dash=""){const e=document.createElementNS("http://www.w3.org/2000/svg","line");e.setAttribute("x1",x1);e.setAttribute("y1",y1);e.setAttribute("x2",x2);e.setAttribute("y2",y2);e.setAttribute("stroke",col);if(dash)e.setAttribute("stroke-dasharray",dash);svg.appendChild(e)}function text(x,yv,s,a="middle"){const e=document.createElementNS("http://www.w3.org/2000/svg","text");e.setAttribute("x",x);e.setAttribute("y",yv);e.setAttribute("text-anchor",a);e.setAttribute("font-size","12");e.textContent=s;svg.appendChild(e)}line(m.l,m.t+ch,W-m.r,m.t+ch);line(m.l,m.t,m.l,m.t+ch);for(let i=0;i<=5;i++){const f=ymax*i/5;line(m.l,y(f),W-m.r,y(f),"#e5e7eb","5 5");text(m.l-8,y(f)+4,Math.round(f)+" Hz","end")}const marks=["circle","rect","tri"];valid.forEach((c,i)=>{const x=m.l+i*cw/valid.length+cw/valid.length/2,yy=y(c.f),col=["#2563eb","#16a34a","#f97316","#7c3aed"][(c.layer-1)%4];if(marks[(c.layer-1)%3]==="circle"){const e=document.createElementNS("http://www.w3.org/2000/svg","circle");e.setAttribute("cx",x);e.setAttribute("cy",yy);e.setAttribute("r",5);e.setAttribute("fill",col);svg.appendChild(e)}else if(marks[(c.layer-1)%3]==="rect"){const e=document.createElementNS("http://www.w3.org/2000/svg","rect");e.setAttribute("x",x-5);e.setAttribute("y",yy-5);e.setAttribute("width",10);e.setAttribute("height",10);e.setAttribute("fill",col);svg.appendChild(e)}else{const e=document.createElementNS("http://www.w3.org/2000/svg","path");e.setAttribute("d",`M${x} ${yy-7} L${x-7} ${yy+6} L${x+7} ${yy+6} Z`);e.setAttribute("fill",col);svg.appendChild(e)}text(x,yy-10,c.f.toFixed(0));text(x,m.t+ch+20,`${c.layer}-${c.cell}`)})}
+
+function calc(){autoLen();const d=n("d"),D=n("D"),r0=d/2,r1=D/2,ll=n("leftL"),cl=n("centerL"),rl=n("rightL"),L=ll+cl+rl,c=n("c"),hole=n("hole"),neck=n("neck"),corr=n("corr"),Smm=Math.PI*(hole/2)**2,Leff=neck+corr*hole/2,S=Smm*1e-6,Le=Leff*1e-3,ls=lens(),cells=[],angSets=[];$("layerTables").innerHTML="";let x=0,badA=false;
+ls.forEach((len,li)=>{const layer=li+1,x2=x+len,a=angles(layer),lv=segV(x,x2,r0,r1,ll,cl,rl);angSets.push(a);if(a.some(v=>v<=0))badA=true;const card=document.createElement("div");card.className="layer-card";card.innerHTML=`<h3>${layer}${tr("layer")} (${fmt(len)} mm)</h3><div class="table-wrap"><table><thead><tr><th>${tr("cell")}</th><th>${tr("deg")}</th><th>${tr("v")} (cm³)</th><th>${tr("f")} (Hz)</th></tr></thead><tbody id="tb${layer}"></tbody></table></div>`;$("layerTables").appendChild(card);let start=0;const tb=$("tb"+layer);a.forEach((ag,ai)=>{const V=lv*ag/360,f=hh(c,S,V*1e-9,Le);cells.push({layer,cell:ai+1,V,f});tb.innerHTML+=`<tr><td>${layer}-${ai+1}</td><td>${fmt(start,0)} - ${fmt(start+ag,0)}</td><td>${fmt(V/1000,2)}</td><td>${Number.isFinite(f)?fmt(f,1):"-"}</td></tr>`;start+=ag});x=x2});
+const totalV=segV(0,L,r0,r1,ll,cl,rl),fs=cells.map(c=>c.f).filter(Number.isFinite);$("mCells").textContent=cells.length;$("mVol").textContent=fmt(totalV/1000,2)+" cm³";if(fs.length){const mn=Math.min(...fs),mx=Math.max(...fs),mnc=cells.find(c=>c.f===mn),mxc=cells.find(c=>c.f===mx);$("mRange").textContent=fmt(mn,1)+" - "+fmt(mx,1)+" Hz";$("mMin").textContent=fmt(mn,1)+" Hz";$("mMax").textContent=fmt(mx,1)+" Hz"}else{$("mRange").textContent="-";$("mMin").textContent="-";$("mMax").textContent="-"}$("lengthWarn").style.display=ls.some(v=>v<=0)?"block":"none";$("lengthWarn").textContent=tr("warnL");$("angleWarn").style.display=badA?"block":"none";$("angleWarn").textContent=tr("warnA");drawShape(ls,angSets);drawDonuts(ls,angSets);drawChart(cells)}
+
+function resetAll(){["leftL","centerL","rightL","D","d","c","neck","hole","corr"].forEach((id,i)=>$(id).value=[15,100,15,44,9,210,8,2,1.7][i]);$("layerCount").value=3;buildLengths();buildCirc();calc()}
+["leftL","centerL","rightL","D","d","c","neck","hole","corr"].forEach(id=>$(id).addEventListener("input",()=>{if(["leftL","centerL","rightL"].includes(id))buildLengths(true);calc()}));$("layerCount").addEventListener("change",()=>{buildLengths();buildCirc();calc()});
+setLang("ko");buildLengths();buildCirc();calc();
+</script>
+</body>
+</html>
